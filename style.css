@@ -1,0 +1,128 @@
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    display: flex;
+    overflow: hidden;
+}
+body {
+    flex-direction: column;
+    flex-grow: 1;
+}
+body > * {
+    flex-grow: 1;
+}
+
+.app {
+    overflow: hidden;
+    grid: 50px min-content 1fr 1fr 1fr / 1fr;
+    display: grid;
+}
+.app .menu {
+    grid-area: 2/1/2/4;
+    height: 0;
+    display: grid;
+    grid-auto-rows: 50px;
+    overflow-y: auto;
+    gap: 2px;
+    background-color: rgb(142, 142, 142);
+    border-bottom: 2px solid rgb(100, 100, 100);
+    transition: height 1s;
+}
+.app .menu.active {
+    max-height: 40vh;
+    height: fit-content;
+    transition: height 1s;
+}
+.app .menu > * {
+    background-color: white;
+}
+.app .top-bar {
+    grid-area: 1/1/1/4;
+    background-color: rgb(10, 73, 67);
+    display: flex;
+    padding: 0 7px 0 12px;
+}
+.app .top-bar > * {
+    flex-grow: 1;
+    align-items: center;
+}
+.app .top-bar .left {
+    display: flex;
+    justify-content: start;
+}
+.app .top-bar .right {
+    display: flex;
+    justify-content: end;
+}
+
+.app .main {
+    grid-area: 3/1/5/4;
+    background-color: white;
+    overflow-y: scroll;
+}
+
+.app .icon {
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app .main, .app .content, .app .load-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: start;
+    padding: 10px;
+    gap: 10px;
+}
+
+.app .main > *, .app .content > *, .app .load-content > * {
+    flex-shrink: 0;
+}
+
+.app .content, .app .load-content {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.app .selection {
+    min-width: 20ch;
+    max-width: 70ch;
+    width: 70vw;
+    height: 25px;
+    text-align: center;
+}
+
+.app .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.app .big-button {
+    background-color: rgb(9, 210, 9);
+    border: 2px solid rgb(132, 255, 101);
+    user-select: none;
+    -webkit-user-select: none;
+    color: white;
+    font-size: large;
+    height: 80px;
+    width: 80px;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.app .big-button:hover {
+    filter: brightness(150%);
+}
+
+.app .toload {
+    display: none;
+}

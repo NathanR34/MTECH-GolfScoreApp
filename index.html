@@ -9,6 +9,41 @@
     <link type="text/css" rel="stylesheet" href="style.css">
 </head>
 <body>
-    
+    <div id="golfApp" class="app">
+        <div class="top-bar">
+            <div class="left">
+                <div class="icon page-icon"><img width=50 height=30 src="./icons/score_table.svg" alt="score table"></div>
+            </div>
+            <div class="right">
+                <div class="icon button menu-icon menu-button"><img width=32 height=32 src="./icons/menu.svg" alt="menu"></div>
+            </div>
+        </div>
+        <div class="menu" id="menu">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <div class="toload main" id="start-page">
+            <div class="stack">
+                <label for="golf-course-names-start-selection">Golf Course</label>
+                <input class="selection" list="golf-course-names" name="golf courses" id="golf-course-names-start-selection" onchange="this.value = app.selectGolfCourse(this.value)">
+            </div>
+            <div class="toload stack" id="start-page-extended-options">
+                <div class="stack">
+                    <input class="selection" list="golf-course-tee-types">
+                </div>
+            </div>
+            <div class="big-button" onclick="app.createCourseFromPage()">Start</div>
+        </div>
+        <div class="toload main" id="golf-score-page">
+            <div class="content">
+                <div id="score-table" class="score-table"></div>
+                Content
+            </div>
+            <div class="load-content">
+                Loading...
+            </div>
+        </div>
+    </div>
 </body>
 </html>
