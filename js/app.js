@@ -145,6 +145,13 @@ function golfApp(appElement){
                 this.responses.push([response, handle]);
                 return handle;
             }
+            
+        }
+        hasTeeType(type){
+            return type in this.ref.teeType.types;
+        }
+        hasTeeColorType(type){
+            return type in this.ref.teeColorType.types;
         }
         get teeTypes(){
             let teeTypes = [];
@@ -190,6 +197,17 @@ function golfApp(appElement){
         toBack(){
             this.backElement.appendChild(this.element);
         }
+        show(){
+            if(this.element.style.display === "none"){
+                this.element.style.display = this.defaultDisplay || "";
+            }
+        }
+        hide(){
+            if(this.element.style.display !== "none"){
+                this.defaultDisplay = this.element.style.display;
+                this.element.style.display = "none";
+            }
+        }
         remove(){
             removeElement(this.element);
         }
@@ -213,27 +231,39 @@ function golfApp(appElement){
             }
             this.element.appendChild(element);
         }
+        clear(){
+            while(this.element.firstChild){
+                this.element.removeChild(this.element.firstChild);
+            }
+        }
     }
 
     var golfScorePageModel;
     class GolfScorePage extends ElementI {
         constructor(data, frontElement, backElement){
             let element = golfScorePageModel.page.clone();
+            super(element, frontElement, backElement);
             this.innerElement = new ElementI(golfScorePageModel.content.main.clone(), element);
             this.loadElement = new ElementI(golfScorePageModel.content.load.clone(), element);
-            super(element, frontElement, backElement);
             this.data = data;
             this.innerElement.toBack();
             this.loadElement.toFront();
-            this.startLoad();
+            this.load();
         }
         async load(){
             if(this.hasLoad) return;
             let success = await this.data.fetchData();
+            function test(){
+                return new Promise(function(resolve, reject){
+                    window.setTimeout(function(){resolve()}, 8000);
+                })
+            }
+            await test();
             if(!success) return false;
             this.loadElement.remove();
             this.loadElement = null;
             this.innerElement.toFront();
+            this.hasLoad = true;
             return true;
         }
     }
@@ -241,8 +271,13 @@ function golfApp(appElement){
     class GolfCourseOptionsElement extends ElementI {
         constructor(element, frontElement, backElement){
             super(element, frontElement, backElement);
-            this.optionI = getElements({
-
+            element = this.element;
+            let datalist = document.createElement("datalist");
+            datalist.id = "golf-course-tee-types";
+            this.add(datalist);
+            this.elements = getElements({
+                teeTypesList: "#golf-course-tee-types",
+                teeTypeSelection: "#golf-course-tee-type-selection"
             }, {
                 element: element,
                 modify: function(element, info, spec){
@@ -251,9 +286,35 @@ function golfApp(appElement){
                         throw new Error("Invalid query");
                     }
                     element = new ElementI(element);
+                    return element;
                 }
-            })
+            });
         }
+        config(course){
+            this.reset();
+
+            this.course = course;
+
+            // change teeTypes
+            for(let type of course.teeTypes){
+                let option = document.createElement("option");
+                option.value = type;
+                this.elements.teeTypesList.add(option);
+            }
+
+        }
+        reset(){
+            this.elements.teeTypesList.clear();
+        }
+        get teeType(){
+            let teeType = this.elements.teeTypeSelection.element.value;
+            console.log(teeType);
+            if(this.course && this.course.hasTeeType(teeType)){
+                return teeType;
+            }
+            return null;
+        }
+        get hasCourse(){return !!this.course;}
     }
 
     class AppPage {
@@ -287,10 +348,11 @@ function golfApp(appElement){
         for(let key in obj){
             let query;
             let info = {};
-            if(typeof obj[key] === "string"){
+            let type = typeof obj[key];
+            info.type = type;
+            if(type === "string"){
                 query = obj[key];
-            } else if(typeof obj[key] === "object"){
-                info.objectSpec = true;
+            } else if(type === "object"){
                 query = obj[key].target;
                 if(obj[key].modify){
                     modify = modify;
@@ -350,19 +412,34 @@ function golfApp(appElement){
                 }
                 removeElement(element);
                 element = new ElementI(element, null);
+                return element;
             }
         });
 
         let elements = getElements(
             {
-                extendedOptions: "#start-page-extended-options"
+                extendedOptions: {
+                    target: "#start-page-extended-options", 
+                    create: (element)=>{element = new GolfCourseOptionsElement(element); element.hide(); return element;}
+                }
             }, {
-                modify: function(element, info){
+                modify: function(element, info, spec){
                     if(!element){
                         console.log("Missing", info.query);
                         throw new Error("Invalid query");
                     }
-                    return new ElementI(element);
+                    let created = false;
+                    if(info.type === "object"){
+                        if(spec.create){
+                            element = spec.create(element, info, spec);
+                            created = true;
+                        }
+                    }
+                    if(!created){
+                        element = new ElementI(element, appElement);
+                    }
+                    element.apply("-.toload");
+                    return element;
                 }
             }
         )
@@ -378,9 +455,10 @@ function golfApp(appElement){
                         throw new Error("Invalid query");
                     }
                     let created = false;
-                    if(typeof spec === "object"){
+                    if(info.objectSpec){
                         if(spec.create){
                             element = spec.create(element, info, spec);
+                            created = true;
                         }
                     }
                     if(!created){
@@ -394,6 +472,9 @@ function golfApp(appElement){
         );
 
         app.elements = elements;
+        app.pages = {
+            start: pages.start
+        };
 
         golfScorePageModel = {
             content: {
@@ -402,15 +483,13 @@ function golfApp(appElement){
             },
             page: pages.golfScore
         }
+        console.log(golfScorePageModel);
 
         pages.start.add(createGolfCoursesDatalist("golf-course-names"));
 
+        app.pages.current = app.pages.start;
         pages.start.toFront();
         pages.golfScore.toBack();
-    }
-
-    function start(){
-        
     }
 
     async function init(){
@@ -420,16 +499,43 @@ function golfApp(appElement){
             golfCourses.push(new GolfCourseData(data));
         }
         makeGolfApp();
-        start();
     }
 
-    function createCourseFromPage(){
-        console.log("button works");
+    function createScore(){
+        let oe = app.elements.extendedOptions;
+        if(oe.hasCourse){
+            let teeType = oe.teeType;
+            if(teeType !== null){
+                oe.course, teeType;
+                let scorePage = new GolfScorePage(oe.course, appElement);
+                app.pages.scorePage = scorePage;
+                toScorePage();
+            } else {
+                console.log("no tee type");
+            }
+        } else {
+            console.log("no course");
+        }
+    }
+
+    function toScorePage(){
+        if(app.pages.scorePage){
+            app.pages.current.toBack();
+            app.pages.scorePage.toFront();
+            app.pages.current = app.pages.scorePage;
+        }
+        //pages.golfScore.toFront();
+    }
+    function toStartPage(){
+        app.pages.current.toBack();
+        app.pages.start.toFront();
+        app.pages.current = app.pages.start;
     }
 
     async function loadCourse(course, name){
         await course.fetchData();
-        console.log(course);
+        app.elements.extendedOptions.config(course);
+        app.elements.extendedOptions.show();
     }
 
     function selectGolfCourse(name){
@@ -445,7 +551,7 @@ function golfApp(appElement){
 
     return {
         init: init,
-        createCourseFromPage: createCourseFromPage,
+        createScore: createScore,
         selectGolfCourse: selectGolfCourse
     }
 }

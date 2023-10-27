@@ -30,10 +30,11 @@
             </div>
             <div class="toload stack" id="start-page-extended-options">
                 <div class="stack">
-                    <input class="selection" list="golf-course-tee-types">
+                    <label for="golf-course-tee-type-selection">Tee Type</label>
+                    <input id="golf-course-tee-type-selection" class="selection golf-course-tee-type-selection" list="golf-course-tee-types">
                 </div>
             </div>
-            <div class="big-button" onclick="app.createCourseFromPage()">Start</div>
+            <div class="big-button" onclick="app.createScore()">Start</div>
         </div>
         <div class="toload main" id="golf-score-page">
             <div class="content">
