@@ -1,5 +1,5 @@
 
-let appElement = document.getElementById("golfApp");
+let appElement = document.getElementById("golf-app");
 
 let app = golfApp(appElement);
 

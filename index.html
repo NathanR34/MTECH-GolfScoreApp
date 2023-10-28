@@ -9,19 +9,22 @@
     <link type="text/css" rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="golfApp" class="app">
+    <div id="golf-app" class="app">
         <div class="top-bar">
             <div class="left">
-                <div class="icon page-icon"><img width=50 height=30 src="./icons/score_table.svg" alt="score table"></div>
+                <div class="icon page-icon" id="top-bar-icon-area">
+                    <!--generated-->
+                </div>
             </div>
             <div class="right">
                 <div class="icon button menu-icon menu-button"><img width=32 height=32 src="./icons/menu.svg" alt="menu"></div>
             </div>
         </div>
         <div class="menu" id="menu">
-            <div></div>
-            <div></div>
-            <div></div>
+            <div class="menu-new-game" onclick="app.to('start')">New Game</div>
+            <div class="menu-course-info" onclick="app.to('courseInfo')">Course Info</div>
+            <div class="menu-current-game" onclick="app.to('score')">Back to Game</div>
+            <div class="menu-edit-game" onclick="">Edit Game</div>
         </div>
         <div class="toload main" id="start-page">
             <div class="stack">
@@ -34,16 +37,23 @@
                     <input id="golf-course-tee-type-selection" class="selection golf-course-tee-type-selection" list="golf-course-tee-types">
                 </div>
             </div>
-            <div class="big-button" onclick="app.createScore()">Start</div>
+            <div class="stack">
+                <div class="big-button" id="start-page-start-button" onclick="app.createScore()">Start</div>
+            </div>
         </div>
         <div class="toload main" id="golf-score-page">
             <div class="content">
-                <div id="score-table" class="score-table"></div>
-                Content
+                <div class="score-table-container">
+
+                </div>
             </div>
             <div class="load-content">
                 Loading...
             </div>
+        </div>
+        <div id="app-icons" style="display: none">
+            <img name="score-table" src="./icons/score_table.svg" alt="Score table">
+            <img name="golf" src="./icons/golf.svg" alt="Golf">
         </div>
     </div>
 </body>

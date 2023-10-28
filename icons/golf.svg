@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="50"
+   height="50"
+   viewBox="0 0 50 50"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <g
+       id="g4"
+       style="fill:#b3b3b3;stroke:#999999;stroke-width:1.0795"
+       transform="matrix(0.82180867,0.22399102,-0.18524242,0.99371282,1.2629489,-2.8081417)">
+      <rect
+         style="fill:#b3b3b3;stroke:#999999;stroke-width:1.56136;stroke-linecap:round;stroke-linejoin:round"
+         id="rect1"
+         width="3.2458012"
+         height="40.7505"
+         x="46.563465"
+         y="-11.556605"
+         rx="1.6229006"
+         ry="0"
+         transform="matrix(0.99986035,0.01671189,-0.36517059,0.93094062,0,0)" />
+      <path
+         id="path1"
+         style="fill:#b3b3b3;stroke:#999999;stroke-width:1.5113;stroke-linecap:round;stroke-linejoin:round"
+         d="m 40.585858,24.897915 c 0.701678,2.945172 -1.504376,5.274396 -6.727283,6.577753 -5.222906,1.303357 -9.925037,0.709752 -11.048892,-2.114314 -1.123855,-2.824067 2.384029,-5.349508 7.606936,-6.652865 5.222906,-1.303357 9.445578,-0.848018 10.169239,2.189426 z" />
+    </g>
+    <g
+       id="g5"
+       transform="translate(4.3680682,1.6564694)">
+      <path
+         id="path4"
+         style="fill:#b3b3b3;stroke:#999999;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"
+         d="m 17.924431,51.293489 c -0.475633,0 -0.356725,-1.415183 -0.594541,-2.888867 -0.237817,-1.473684 -0.630794,-3.050379 -1.266423,-3.68421 -1.076294,-1.073249 1.116578,0 1.860964,0 0.744386,0 2.933313,-1.077193 1.860965,0 -0.447299,0.449319 -1.037764,2.199079 -1.266423,3.68421 -0.227156,1.475365 -0.118909,2.888867 -0.594542,2.888867 z" />
+      <circle
+         style="fill:#f9f9f9;stroke:#ececec;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"
+         id="path3"
+         cx="17.924431"
+         cy="36.96246"
+         r="7" />
+    </g>
+  </g>
+</svg>
