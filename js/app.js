@@ -287,12 +287,13 @@ function golfApp(appElement){
 
     var golfScorePageModel;
     class GolfScorePage extends ElementI {
-        constructor(data, frontElement, backElement){
+        constructor(data, options, frontElement, backElement){
             let element = golfScorePageModel.page.clone();
             super(element, frontElement, backElement);
             this.innerElement = new ElementI(golfScorePageModel.content.main.clone(), element);
             this.loadElement = new ElementI(golfScorePageModel.content.load.clone(), element);
             this.data = data;
+            this.options = options;
             this.innerElement.toBack();
             this.loadElement.toFront();
             this.load();
@@ -309,26 +310,125 @@ function golfApp(appElement){
             return true;
         }
         create(){
-            this.table = new ScoreTable(this);
-            this.table.addColumn("spec");
-            this.table.addColumn("1");
-            this.table.addColumn("2");
-            this.table.addColumn("3");
-            this.table.addColumn("4");
-            this.table.addColumn("5");
-            this.table.addColumn("6");
-            this.table.addColumn("7");
-            this.table.addColumn("8");
-            this.table.addColumn("9");
-            this.table.addColumn("out");
+            this.table = new ScoreTable(this, function(item){
+                let prop = {};
+                if(typeof item.id[0] === "number"){
+                    prop.player = true;
+                }
+                if(typeof item.id[1] === "number"){
+                    prop.hole = true;
+                    if(item.id[1] < 10){
+                        prop.outHole = true;
+                    } else {
+                        prop.inHole = true;
+                    }
+                }
+                switch(item.id[1]){
+                    case "spec":
+                        prop.spec = true;
+                    break;
+                    case "out":
+                        prop.out = true;
+                    break;
+                    case "in":
+                        prop.in = true;
+                    break;
+                    case "total":
+                        prop.total = true;
+                    break;
+                }
+                switch(item.id[0]){
+                    case "hole":
+                    case "yardage":
+                    case "par":
+                    case "handicap":
+                        if(!prop.spec){
+                            prop.info = true;
+                        }
+                        prop.specType = item.id[0];
+                    break;
+                }
+                if(prop.player && prop.spec){
+                    prop.playerName = true;
+                    prop
+                }
+                if(prop.player && prop.hole || prop.playerName){
+                    prop.editable = true;
+                }
+                if(prop.hole && prop.info){
+                    prop.data = true;
+                }
+                return prop;
+            });
+            this.table.addProperty("editable", {
+                setup: function(item){
+                    item.interactive = true;
+                }
+            });
+            let data = this.data;
+            let options = this.options;
+            function getData(hole){
+                let holeData;
+                for(let hole of data.data.holes){
+                    if(hole.hole === hole){
+
+                    }
+                }
+            }
+            this.table.addProperty("specType", {
+                setup: function(item){
+                    if(item.properties.spec){
+                        let text = item.properties.specType;
+                        text = text[0].toUpperCase() + text.slice(1);
+                        item.text = text;
+                    }
+                }
+            });
+            this.table.addProperty("playerName", {
+                setup: function(item){
+                    item.text = "";
+                }
+            });
+            this.table.addProperty("data", {
+                setup: function(item){
+                    let teeBoxes = data
+                }
+            });
             this.table.addRow("hole");
             this.table.addRow("yardage");
             this.table.addRow("par");
             this.table.addRow("handicap");
-            this.table.addRow("player1");
-            this.table.addRow("player2");
-            this.table.addRow("player3");
-            this.table.addRow("player4");
+            this.table.addRow(1);
+            this.table.addRow(2);
+            this.table.addRow(3);
+            this.table.addRow(4);
+            this.table.addColumn("spec");
+            this.table.addColumn(1);
+            this.table.addColumn(2);
+            this.table.addColumn(3);
+            this.table.addColumn(4);
+            this.table.addColumn(5);
+            this.table.addColumn(6);
+            this.table.addColumn(7);
+            this.table.addColumn(8);
+            this.table.addColumn(9);
+            this.table.addColumn("out");
+            this.table.addColumn(10);
+            this.table.addColumn(11);
+            this.table.addColumn(12);
+            this.table.addColumn(13);
+            this.table.addColumn(14);
+            this.table.addColumn(15);
+            this.table.addColumn(16);
+            this.table.addColumn(17);
+            this.table.addColumn(18);
+            this.table.addColumn("in");
+            this.table.addColumn("total");
+            
+            for(let item of this.table){
+                console.log(`${item.id[0]}-${item.id[1]}`, item);
+            }
+
             this.table.toFront();
         }
     }
@@ -408,9 +508,11 @@ function golfApp(appElement){
             super(element, row);
             this.id = id;
             this.row = row;
+            this.properties = {};
+            this.toNotify = new Set();
             this.element.addEventListener("click", this);
-            this.interactive = true;
-            this.text = `${id[0]}-${id[1]}`
+            this.text = `${id[0]}-${id[1]}`;
+            this.row.table.register(this);
         }
         set score(score){
             this._score = score || 0;
@@ -458,6 +560,10 @@ function golfApp(appElement){
             super(element, table);
             this.id = id;
             this.items = [];
+            this.table = table;
+        }
+        *[Symbol.iterator](){
+            yield* this.items;
         }
         addColumn(id){
             let item = new ScoreTableItem(this, document.createElement("td"), [this.id, id]);
@@ -478,8 +584,43 @@ function golfApp(appElement){
         }
     }*/
 
+    class ScoreTableProperty {
+        constructor(properties, name, {setup, test}={}){
+            this.properties = properties;
+            this.name = name;
+            //this.updateFn = update;
+            this.setupFn = setup;
+            this.testFn = test;
+            this.items = new Set();
+            //this.toUpdate = toUpdate;
+        }
+        *[Symbol.iterator](){
+            yield* this.items;
+        }
+        test(item){
+            return !this.testFn || this.testFn(item, this);
+        }
+        update(){
+            if(this.updateFn){
+                this.updateFn(this);
+            }
+        }
+        setup(item){
+            this.items.add(item);
+            if(this.setupFn) this.setupFn(item, this);
+        }
+        notify(){
+            for(let name of this.toUpdate){
+                let prop = this.properties[name];
+                if(prop){
+                    prop.notify(this);
+                }
+            }
+        }
+    }
+
     class ScoreTable extends ElementI {
-        constructor(scorePage){
+        constructor(scorePage, getProps=()=>[]){
             let frontElement = scorePage.innerElement;
             let element = document.createElement("table");
             super(element, frontElement);
@@ -487,8 +628,15 @@ function golfApp(appElement){
             this.apply(".score-table");
             this.rows = [];
             this.columns = [];
+            this.properties = {};
+            this.getPropsFn = getProps;
             //this.head = new ScoreTableHead(this);
             //this.head.toFront();
+        }
+        *[Symbol.iterator](){
+            for(let row of this.rows){
+                yield* row;
+            }
         }
         addColumn(id){
             this.columns.push(id);
@@ -506,6 +654,18 @@ function golfApp(appElement){
             }
             row.toFront();
             return row;
+        }
+        register(item){
+            let props = this.getPropsFn(item);
+            item.properties = props;
+            for(let name in this.properties){
+                if(props[name]){
+                    this.properties[name].setup(item);
+                }
+            }
+        }
+        addProperty(name, options){
+            this.properties[name] = new ScoreTableProperty(this.properties, name, options);
         }
     }
 
@@ -783,7 +943,7 @@ function golfApp(appElement){
                 oe.course, teeType;
                 app.pages.add({
                     score: {
-                        element: new GolfScorePage(oe.course, appElement),
+                        element: new GolfScorePage(oe.course, {teeType: teeType}, appElement),
                         icon: app.icons.scoreTable
                     }
                 });
