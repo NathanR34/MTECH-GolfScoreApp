@@ -68,6 +68,7 @@ function golfApp(appElement){
     class TeeBoxData {
         constructor(data, ref){
             this.typeData = TeeType.unique(data, ref);
+            this.data = data;
         }
         get type(){
             return this.typeData.type;
@@ -126,6 +127,9 @@ function golfApp(appElement){
                 this.responses = [];
             }
             return this.success;
+        }
+        async createInfoPage(){
+            if(!this.infoPage) this.infoPage = new GolfCourseInfoPage(this, appElement);
         }
         configData(){
             if(this.data.holes){
@@ -199,9 +203,17 @@ function golfApp(appElement){
         }
         toFront(){
             this.frontElement.appendChild(this.element);
+            this.inBack = false;
         }
         toBack(){
             this.backElement.appendChild(this.element);
+            this.inBack = true;
+        }
+        toElement(element){
+            this.frontElement = element;
+            if(!this.inBack){
+                this.toFront();
+            }
         }
         show(){
             if(this.element.style.display === "none"){
@@ -274,9 +286,11 @@ function golfApp(appElement){
             }
         }
         startEdit(){
-            this.element.contentEditable = true;
-            this.focus()
-            this.select();
+            if(this.interactive){
+                this.element.contentEditable = true;
+                this.focus()
+                this.select();
+            }
         }
         endEdit(){
             let value = this.element.innerText;
@@ -285,13 +299,12 @@ function golfApp(appElement){
         }
     }
 
-    var golfScorePageModel;
     class GolfScorePage extends ElementI {
         constructor(data, options, frontElement, backElement){
-            let element = golfScorePageModel.page.clone();
+            let element = app.model.golfScorePage.page.clone();
             super(element, frontElement, backElement);
-            this.innerElement = new ElementI(golfScorePageModel.content.main.clone(), element);
-            this.loadElement = new ElementI(golfScorePageModel.content.load.clone(), element);
+            this.innerElement = new ElementI(app.model.golfScorePage.content.main.clone(), element);
+            this.loadElement = new ElementI(app.model.golfScorePage.content.load.clone(), element);
             this.data = data;
             this.options = options;
             this.innerElement.toBack();
@@ -310,53 +323,184 @@ function golfApp(appElement){
             return true;
         }
         create(){
-            this.table = new ScoreTable(this, function(item){
-                let prop = {};
-                if(typeof item.id[0] === "number"){
-                    prop.player = true;
+            class TotalSumField {
+                constructor(){
+                    this.outs = [];
+                    this.ins = [];
+                    this.outTotals = [];
+                    this.inTotals = [];
+                    this.totals = [];
                 }
-                if(typeof item.id[1] === "number"){
-                    prop.hole = true;
-                    if(item.id[1] < 10){
-                        prop.outHole = true;
-                    } else {
-                        prop.inHole = true;
+                update(){
+                    // deliberatly making NaN so it is known there is no score yet
+                    // allowing a placeholder value instead (adding a progressive feel)
+                    let outTotal = NaN;
+                    for(let item of this.outs){
+                        if(isFinite(item.score)){
+                            outTotal = (outTotal || 0) + item.score;
+                        }
+                    }
+                    let inTotal = NaN;
+                    for(let item of this.ins){
+                        if(isFinite(item.score)){
+                            inTotal = (inTotal || 0) + item.score;
+                        }
+                    }
+                    let total = outTotal + inTotal;
+                    for(let item of this.outTotals){
+                        item.score = outTotal;
+                    }
+                    for(let item of this.inTotals){
+                        item.score = inTotal;
+                    }
+                    for(let item of this.totals){
+                        item.score = total;
                     }
                 }
-                switch(item.id[1]){
-                    case "spec":
-                        prop.spec = true;
-                    break;
-                    case "out":
-                        prop.out = true;
-                    break;
-                    case "in":
-                        prop.in = true;
-                    break;
-                    case "total":
-                        prop.total = true;
-                    break;
+                add(item, type){
+                    switch(type){
+                        case "out":
+                            this.outs.push(item);
+                            break;
+                        case "in":
+                            this.ins.push(item);
+                            break;
+                    }
                 }
-                switch(item.id[0]){
-                    case "hole":
-                    case "yardage":
-                    case "par":
-                    case "handicap":
-                        if(!prop.spec){
-                            prop.info = true;
-                        }
-                        prop.specType = item.id[0];
-                    break;
+                addTotal(item, type){
+                    switch(type){
+                        case "out": 
+                            this.outTotals.push(item);
+                            break;
+                        case "in":
+                            this.inTotals.push(item);
+                            break;
+                        case "total":
+                            this.totals.push(item);
+                            break;
+                    }
                 }
+            }
+            let fields = {
+                yardage: new TotalSumField(),
+                par: new TotalSumField(),
+                player: {}
+            }
+
+            const ROW_SIZE = 256;
+            const GROUP_SIZE = 64;
+
+            this.table = new ScoreTable(this, function(item){
+                // categories
+                let cat1 = item.id[1];
+                let cat2 = item.id[0];
+                let prop = {};
+                let order = 1;
+                if(typeof cat2 === "number"){
+                    prop.hole = true;
+                    prop.holeNumber = cat2;
+                    order += cat2 * ROW_SIZE;
+                    if(cat2 <= 9){
+                        prop.holeType = "out";
+                    } else {
+                        prop.holeType = "in";
+                        order += ROW_SIZE * 2;
+                    }
+                } else {
+                    switch(cat2){
+                        case "spec":
+                            prop.spec = true;
+                        break;
+                        case "total":
+                            order += ROW_SIZE;
+                        case "in":
+                            order += ROW_SIZE*10;
+                        case "out":
+                            order += ROW_SIZE*11;
+                            prop.totalType = cat2;
+                        break;
+                    }
+                }
+                if(typeof cat1 === "number"){
+                    prop.player = true;
+                    prop.playerNum = cat1;
+                    order += GROUP_SIZE*2 + cat1;
+                    if(!prop.spec){
+                        prop.isScore = true;
+                    }
+                } else {
+                    switch(cat1){
+                        case "hole":
+                            order -= 1;
+                        case "yardage":
+                            order -= 1;
+                        case "par":
+                            if(!prop.spec){
+                                prop.isScore = true;
+                            }
+                            order -= 1;
+                        case "handicap":
+                            if(!prop.spec){
+                                prop.info = true;
+                            }
+                            order += 3;
+                            prop.specType = cat1;
+                        break;
+                    }
+                }
+                
                 if(prop.player && prop.spec){
                     prop.playerName = true;
-                    prop
+                    prop.initialValue = "Player" + prop.playerNum;
                 }
                 if(prop.player && prop.hole || prop.playerName){
                     prop.editable = true;
                 }
+                if(prop.player && prop.hole){
+                    prop.initialValue = "-";
+                }
                 if(prop.hole && prop.info){
                     prop.data = true;
+                }
+                if(prop.spec && prop.specType && !prop.player){
+                    let label = prop.specType
+                    label = label[0].toUpperCase() + label.slice(1)
+                    prop.label = label;
+                }
+                if(prop.specType === "hole" && prop.totalType){
+                    let label = prop.totalType;
+                    label = label[0].toUpperCase() + label.slice(1)
+                    prop.label = label;
+                }
+                if(prop.hole){
+                    if(prop.player){
+                        if(!(prop.playerNum in fields.player)){
+                            fields.player[prop.playerNum] = new TotalSumField();
+                        }
+                        fields.player[prop.playerNum].add(item, prop.holeType);
+                        item.toUpdate.push(fields.player[prop.playerNum]);
+                    } else if(prop.specType in fields){
+                        fields[prop.specType].add(item, prop.holeType);
+                        item.toUpdate.push(fields[prop.specType]);
+                    }
+                } else if(prop.totalType){
+                    if(prop.player){
+                        if(!(prop.playerNum in fields.player)){
+                            fields.player[prop.playerNum] = new TotalSumField();
+                        }
+                        fields.player[prop.playerNum].addTotal(item, prop.totalType);
+                    } else if(prop.specType in fields){
+                        fields[prop.specType].addTotal(item, prop.totalType);
+                    }
+                }
+                if(prop.specType === "handicap"){
+                    if(!prop.hole && prop.info){
+                        prop.blank = true;
+                    }
+                }
+                prop.order = order;
+                if(prop.editable && !prop.playerName && prop.player){
+                    prop.userCompletes = true;
                 }
                 return prop;
             });
@@ -365,71 +509,192 @@ function golfApp(appElement){
                     item.interactive = true;
                 }
             });
+            this.table.addProperty("isScore", {
+                setup: function(item){
+                    item.isScore = true;
+                }
+            });
+            this.table.addProperty("userCompletes", {
+                setup: function(item){
+                    item.completed = false;
+                }
+            });
             let data = this.data;
             let options = this.options;
-            function getData(hole){
-                let holeData;
-                for(let hole of data.data.holes){
-                    if(hole.hole === hole){
-
-                    }
-                }
+            function getData(holeNumber){
+                return data.golfHoles[holeNumber].teeBoxes[options.teeType].data;
             }
-            this.table.addProperty("specType", {
+            this.table.addProperty("label", {
                 setup: function(item){
-                    if(item.properties.spec){
-                        let text = item.properties.specType;
-                        text = text[0].toUpperCase() + text.slice(1);
-                        item.text = text;
-                    }
+                    item.text = item.properties.label;
+                }
+            });
+            this.table.addProperty("initialValue", {
+                setup: function(item){
+                    item.text = item.properties.initialValue;
+                }
+            });
+            this.table.addProperty("blank", {
+                setup: function(item){
+                    item.text = "";
+                    item.apply(".blank");
                 }
             });
             this.table.addProperty("playerName", {
                 setup: function(item){
-                    item.text = "";
+                    item.apply(".player-field");
                 }
             });
             this.table.addProperty("data", {
                 setup: function(item){
-                    let teeBoxes = data
+                    let holeNumber = item.properties.holeNumber;
+                    let specType = item.properties.specType
+                    if(specType === "hole"){
+                        item.text = holeNumber;
+                    } else {
+                        let teeBox = getData(holeNumber);
+                        if(teeBox){
+                            switch(specType){
+                                case "yardage":
+                                    item.text = teeBox.yards;
+                                    item.score = teeBox.yards;
+                                break;
+                                case "par":
+                                    item.text = teeBox.par;
+                                    item.score = teeBox.par;
+                                break;
+                                case "handicap":
+                                    if(!item.properties.blank){
+                                        item.text = teeBox.hcp;
+                                    }
+                                break;
+                            }
+                        }
+                    }
+                    
+                    
                 }
             });
-            this.table.addRow("hole");
-            this.table.addRow("yardage");
-            this.table.addRow("par");
-            this.table.addRow("handicap");
+
+            this.table.addRow("spec");
             this.table.addRow(1);
             this.table.addRow(2);
             this.table.addRow(3);
             this.table.addRow(4);
-            this.table.addColumn("spec");
+            this.table.addRow(5);
+            this.table.addRow(6);
+            this.table.addRow(7);
+            this.table.addRow(8);
+            this.table.addRow(9);
+            this.table.addRow("out");
+            this.table.addRow(10);
+            this.table.addRow(11);
+            this.table.addRow(12);
+            this.table.addRow(13);
+            this.table.addRow(14);
+            this.table.addRow(15);
+            this.table.addRow(16);
+            this.table.addRow(17);
+            this.table.addRow(18);
+            this.table.addRow("in");
+            this.table.addRow("total");
+
+            this.table.addColumn("hole");
+            this.table.addColumn("yardage");
+            this.table.addColumn("par");
+            this.table.addColumn("handicap");
             this.table.addColumn(1);
             this.table.addColumn(2);
             this.table.addColumn(3);
             this.table.addColumn(4);
-            this.table.addColumn(5);
-            this.table.addColumn(6);
-            this.table.addColumn(7);
-            this.table.addColumn(8);
-            this.table.addColumn(9);
-            this.table.addColumn("out");
-            this.table.addColumn(10);
-            this.table.addColumn(11);
-            this.table.addColumn(12);
-            this.table.addColumn(13);
-            this.table.addColumn(14);
-            this.table.addColumn(15);
-            this.table.addColumn(16);
-            this.table.addColumn(17);
-            this.table.addColumn(18);
-            this.table.addColumn("in");
-            this.table.addColumn("total");
             
-            for(let item of this.table){
-                console.log(`${item.id[0]}-${item.id[1]}`, item);
+
+            for(let field in fields){
+                if(field === "player"){
+                    for(let player in fields.player){
+                        fields.player[player].update();
+                    }
+                } else {
+                    fields[field].update();
+                }
             }
 
             this.table.toFront();
+        }
+    }
+
+    class GolfCourseInfoPage extends ElementI {
+        constructor(data, frontElement, backElement){
+            let element = app.model.golfCourseInfoPage.page.clone();
+            super(element, frontElement, backElement);
+            this.innerElement = new ElementI(app.model.golfCourseInfoPage.content.main.clone(), element);
+            this.loadElement = new ElementI(app.model.golfCourseInfoPage.content.load.clone(), element);
+            this.data = data;
+            this.loadElement.toFront();
+            this.innerElement.toFront();
+            this.elements = getElements({
+                img: "img.course-image",
+                website: ".course-website",
+                name: ".course-header",
+                phone: ".course-phone-number",
+                address: ".course-address"
+            }, {
+                element: element,
+                modify: function(element, info){
+                    if(!element){
+                        console.log("Missing", info.query);
+                        throw new Error("Invalid query");
+                    }
+                    element = new ElementI(element);
+                    return element;
+                }
+            });
+            this.innerElement.toBack();
+            this.load();
+        }
+        async load(){
+            if(this.hasLoad) return;
+            let success = await this.data.fetchData();
+            if(!success) return false;
+            this.loadElement.remove();
+            this.loadElement = null;
+            this.innerElement.toFront();
+            this.create();
+            this.hasLoad = true;
+            return true;
+        }
+        setPage(){
+            app.menu.items.info.show();
+            app.pages.add({
+                courseInfo: {
+                    element: this,
+                    icon: app.icons.info
+                }
+            });
+        }
+        create(){
+            let data = this.data.data;
+            this.elements.address.text = `${data.addr1} ${data.city}, ${data.stateOrProvince} ${data.zipCode}`;
+            this.elements.phone.text = data.phone;
+            this.elements.name.text = data.name;
+            let websiteI = this.elements.website;
+            let website = websiteI.element;
+            let websiteAddr = data.website || "";
+            websiteI.text = websiteAddr;
+            let attr = document.createAttribute("href");
+            attr.value = websiteAddr;
+            website.attributes.setNamedItem(attr);
+            attr = document.createAttribute("target");
+            attr.value = "_blank";
+            website.attributes.setNamedItem(attr);
+            let imgI = this.elements.img;
+            let img = imgI.element;
+            if(data.thumbnail){
+                img.src = data.thumbnail;
+                img.width = 480;
+                img.height = 270;
+            }
+           
         }
     }
 
@@ -442,7 +707,8 @@ function golfApp(appElement){
             this.add(datalist);
             this.elements = getElements({
                 teeTypesList: "#golf-course-tee-types",
-                teeTypeSelection: "#golf-course-tee-type-selection"
+                teeTypeSelection: "#golf-course-tee-type-selection",
+                startButton: "#start-page-start-button"
             }, {
                 element: element,
                 modify: function(element, info){
@@ -454,6 +720,7 @@ function golfApp(appElement){
                     return element;
                 }
             });
+            this.elements.startButton.hide();
         }
         config(course){
             this.reset();
@@ -471,10 +738,21 @@ function golfApp(appElement){
         reset(){
             this.elements.teeTypesList.clear();
         }
+        signalAllValid(allValid){
+            if(allValid){
+                this.elements.startButton.show();
+                this.allowStart = true;
+            } else {
+                this.elements.startButton.hide();
+                this.allowStart = false;
+            }
+        }
         signalInvalid(name){
+            
+            let valid = true;
             switch(name){
                 case "golfCourse":
-
+                    
                 break;
                 case "teeType":
 
@@ -492,42 +770,87 @@ function golfApp(appElement){
             return null;
         }
         get hasCourse(){return !!this.course;}
-        set allowStart(allow){
-
-        }
-    }
-
-    class Player {
-        constructor(elements){
-            this.elements = elements;
-        }
     }
 
     class ScoreTableItem extends ElementI {
         constructor(row, element, id=["",""]){
             super(element, row);
             this.id = id;
+            this.strId = `${id[0]}-${id[1]}`;
             this.row = row;
             this.properties = {};
-            this.toNotify = new Set();
-            this.element.addEventListener("click", this);
-            this.text = `${id[0]}-${id[1]}`;
+            this.toUpdate = [];
             this.row.table.register(this);
         }
         set score(score){
-            this._score = score || 0;
-            this.text = this.score;
+            score = Number(score);
+            if(!isFinite(score)){
+                this._score = NaN;
+                this.text = "-";
+            } else {
+                score = Math.round(score%1000000);
+                this._score = score;
+                this.text = score;
+                this.completed = true;
+            }
+            for(let updateable of this.toUpdate){
+                updateable.update();
+            }
         }
         get score(){
             return this._score;
         }
+        set isScore(isScore){
+            this._isScore = isScore;
+        }
+        get isScore(){
+            return this._isScore || false;
+        }
+        set completed(completed){
+            if(completed && this.completed) return;
+            if(this.interactive){
+                this._completed = completed;
+                this.row.table.setComplete(this, completed===false?this.properties.order:0);
+            }
+        }
+        get completed(){
+            return this._completed !== false;
+        }
         handleEvent(e){
-            switch(e.type){
-                case "click":
-                    if(this.interactive){
+            if(this.interactive){
+                let confirm = false;
+                let isLong = false;
+                let inputLength = 8;
+                if(this.text.length >= inputLength) isLong = true;
+                switch(e.type){
+                    case "click":
                         this.startEdit();
-                    }
-                break;
+                        break;
+                    case "keydown":
+                        // exit on regular input
+                        
+                        if(e.code !== "Enter") {
+                            if(isLong) {
+                                this.select();
+                            }
+                            break;
+                        }
+                        confirm = true;
+                        e.preventDefault();
+                    case "blur":
+                    case "focusout":
+                        let text = this.endEdit();
+                        if(this.isScore){
+                            this.score = text;
+                        } else {
+                            this.text = text;
+                        }
+                        if(confirm){
+                            if(!this.completed) this.completed = true;
+                            this.row.table.goToNext();
+                        }
+                        break;
+                }
             }
         }
         set interactive(interactive){
@@ -535,16 +858,29 @@ function golfApp(appElement){
                 this._interactive = true;
                 this.apply(".interactive");
                 this.element.addEventListener("click", this);
+                this.element.addEventListener("keydown", this);
+                this.element.addEventListener("blur", this);
+                this.element.addEventListener("focusout", this);
+
             } else {
+                if(!this.completed){
+                    this.completed = true;
+                }
                 this._interactive = false;
                 this.apply("-.interactive");
                 this.element.removeEventListener("click", this);
+                this.element.removeEventListener("keydown", this);
+                this.element.removeEventListener("blur", this);
+                this.element.removeEventListener("focusout", this);
             }
         }
         get interactive(){
             return this._interactive;
         }
         startEdit(){
+            if(this.isScore && isNaN(this.score)){
+                this.text = "";
+            }
             this.apply(".inedit");
             return super.startEdit();
         }
@@ -585,8 +921,8 @@ function golfApp(appElement){
     }*/
 
     class ScoreTableProperty {
-        constructor(properties, name, {setup, test}={}){
-            this.properties = properties;
+        constructor(table, name, {setup, test}={}){
+            this.table = table;
             this.name = name;
             //this.updateFn = update;
             this.setupFn = setup;
@@ -609,14 +945,82 @@ function golfApp(appElement){
             this.items.add(item);
             if(this.setupFn) this.setupFn(item, this);
         }
-        notify(){
-            for(let name of this.toUpdate){
-                let prop = this.properties[name];
-                if(prop){
-                    prop.notify(this);
-                }
+    }
+
+    class OrderedNode {
+        constructor(index, value){
+            this.next = null;
+            this.prev = null;
+            this.index = index;
+            this.value = value;
+        }
+        set next(next){
+            this._next = next;
+            if(next){
+                next.prev = this;
             }
         }
+        get next(){
+            return this._next;
+        }
+        
+        set prev(prev){
+            this._prev = prev;
+        }
+        get prev(){
+            return this._prev;
+        }
+        test(node){
+            return (node.index > this.index);
+        }
+        insert(node){
+            if(this.next && this.next.test(node)){
+                return this.next.insert(node);
+            } else {
+                let last = this.next;
+                this.next = node;
+                if(last){
+                    node.insert(last);
+                }
+            }
+            return;
+        }
+        remove(){
+            if(this.prev){
+                this.prev.next = this.next;
+            }
+        }
+        toArray(arr=[]){
+            arr.push(this);
+            return this.next? this.next.toArray(arr) : arr;
+        }
+        toString(){
+            return `Node{${this.index}:${this.value}}${this.next?` ${this.next.toString()}`:``}`;
+        }
+    }
+    class OrderedNodeHead extends OrderedNode {
+        constructor(){
+            super(null);
+            window.node = this;
+        }
+        set prev(prev){}
+        get prev(){return null}
+        get isEmpty(){
+            return !!this.next;
+        }
+        test(){return true;}
+        create(index, value){
+            let node = new OrderedNode(index, value);
+            this.insert(node);
+            return node;
+        }
+        toString(){
+            return `<Head>${this.next?` ${this.next.toString()}`:``}`;
+        }
+        toArray(){
+            return this.next? this.next.toArray([]) : [];
+        }
+        remove(){}
     }
 
     class ScoreTable extends ElementI {
@@ -628,7 +1032,11 @@ function golfApp(appElement){
             this.apply(".score-table");
             this.rows = [];
             this.columns = [];
+            this.items = {};
             this.properties = {};
+            this.propertyOrder = [];
+            this.uncomplete = new Map();
+            this.nextList = new OrderedNodeHead();
             this.getPropsFn = getProps;
             //this.head = new ScoreTableHead(this);
             //this.head.toFront();
@@ -656,16 +1064,63 @@ function golfApp(appElement){
             return row;
         }
         register(item){
+            this.items[item.strId] = item;
             let props = this.getPropsFn(item);
             item.properties = props;
-            for(let name in this.properties){
+            for(let name of this.propertyOrder){
                 if(props[name]){
                     this.properties[name].setup(item);
                 }
             }
         }
         addProperty(name, options){
-            this.properties[name] = new ScoreTableProperty(this.properties, name, options);
+            this.properties[name] = new ScoreTableProperty(this, name, options);
+            this.propertyOrder.push(name);
+        }
+        setComplete(item, index){
+            if(index){
+                if(!this.uncomplete.has(item)){
+                    let node = this.nextList.create(index, item);
+                    this.uncomplete.set(item, node);
+                }
+            } else if(this.uncomplete.has(item)){
+                let node = this.uncomplete.get(item);
+                this.uncomplete.delete(item);
+                node.remove();
+            }
+            if(this.isComplete){
+                if(toastr){
+                    toastr.options = {
+                        "closeButton": true,
+                        "debug": false,
+                        "newestOnTop": false,
+                        "progressBar": false,
+                        "positionClass": "toast-bottom-center",
+                        "preventDuplicates": false,
+                        "onclick": null,
+                        "showDuration": "300",
+                        "hideDuration": "1000",
+                        "timeOut": "5000",
+                        "extendedTimeOut": "1000",
+                        "showEasing": "swing",
+                        "hideEasing": "linear",
+                        "showMethod": "fadeIn",
+                        "hideMethod": "fadeOut"
+                      };
+                    toastr.success("Congratulations, you finished the game!");
+                }
+                if(this.onCompleted){
+                    this.onCompleted(this);
+                }
+            }
+        }
+        goToNext(){
+            if(this.nextList.next){
+                this.nextList.next.value.startEdit();
+            }
+        }
+        get isComplete(){
+            return !this.uncomplete.size;
         }
     }
 
@@ -823,7 +1278,9 @@ function golfApp(appElement){
         let components = getElements({
             golfScoreContent: "#golf-score-page > .content",
             loadPageContent: "#golf-score-page > .load-content",
-            appIcons: "#app-icons"
+            appIcons: "#app-icons",
+            golfCourseInfoContent: "#golf-course-info-page > .content",
+            golfCourseInfoLoad: "#golf-course-info-page > .load-content"
         }, {
             modify: modify,
             remove: true
@@ -838,8 +1295,7 @@ function golfApp(appElement){
                 },
                 menu: "#menu",
                 topBarIconArea: "#top-bar-icon-area",
-                background: ".app",
-                startButton: "#start-page-start-button"
+                background: ".app"
             }, {
                 modify: modify
             }
@@ -850,7 +1306,8 @@ function golfApp(appElement){
         let pages = getElements(
             {
                 start: "#start-page",
-                golfScore: "#golf-score-page"
+                golfScore: "#golf-score-page",
+                golfCourseInfo: "#golf-course-info-page"
             }, {
                 modify: modify,
                 background: true
@@ -878,7 +1335,8 @@ function golfApp(appElement){
 
         let appIcons = getElements({
             scoreTable: "[name=score-table]",
-            golf: "[name=golf]"
+            golf: "[name=golf]",
+            info: "[name=info]"
         }, {
             element: components.appIcons.element,
             modify: function(element, info){
@@ -906,12 +1364,21 @@ function golfApp(appElement){
             }
         })
 
-        golfScorePageModel = {
-            content: {
-                load: components.loadPageContent,
-                main: components.golfScoreContent
+        app.model = {
+            golfCourseInfoPage: {
+                content: {
+                    load: components.golfCourseInfoLoad,
+                    main: components.golfCourseInfoContent
+                },
+                page: pages.golfCourseInfo
             },
-            page: pages.golfScore
+            golfScorePage: {
+                content: {
+                    load: components.loadPageContent,
+                    main: components.golfScoreContent
+                },
+                page: pages.golfScore
+            }
         }
 
         pages.start.add(createGolfCoursesDatalist("golf-course-names"));
@@ -953,19 +1420,12 @@ function golfApp(appElement){
         }
     }
 
-    function toScorePage(){
-        app.pages.to("score");
-    }
-    function toStartPage(){
-        app.pages.current.toBack();
-        app.pages.start.toFront();
-        app.pages.current = app.pages.start;
-    }
-
     async function loadCourse(course, name){
         await course.fetchData();
         app.elements.extendedOptions.config(course);
         app.elements.extendedOptions.show();
+        await course.createInfoPage();
+        course.infoPage.setPage();
     }
 
     function selectGolfCourse(name){
@@ -973,19 +1433,18 @@ function golfApp(appElement){
             let course = golfCourseByName.get(name);
             loadCourse(course, name);
             app.options.course = course;
-            app.menu.items.info.show();
             return name;
         } else {
-            return "";
+            return name;
         }
     }
 
     app.options = {
-
+        valid: {}
     };
 
     function validateOptions(options){
-        //let oe = app.elements.extendedOptions;
+        let oe = app.elements.extendedOptions;
         for(let key in options){
             if(options[key] === "valid"){
                 app.options.valid[key] = true;
@@ -994,17 +1453,21 @@ function golfApp(appElement){
             }
         }
         let allValid = true;
-        for(let key in app.options){
-            if(!app.options[key]){
+        for(let key of ["golfCourse", "teeType"]){
+            if(!app.options.valid[key]){
                 allValid = false;
                 break;
             }
         }
+
+        oe.signalAllValid(allValid);
+
         return allValid;
     }
 
     function addOption(option){
         let valid = {};
+        let oe = app.elements.extendedOptions;
         if("golfCourse" in option){
             if(golfCourseByName.has(option.golfCourse)){
                 valid.golfCourse = "valid";
@@ -1014,7 +1477,6 @@ function golfApp(appElement){
                 oe.signalInvalid("golfCourse");
             }
         }
-        let oe = app.elements.extendedOptions;
         if("teeType" in option){
             if(oe.hasCourse){
                 if(oe.course.hasTeeType(option.teeType)){
@@ -1029,24 +1491,29 @@ function golfApp(appElement){
                 oe.signalMissing("golfCourse");
             }
         }
-        if(validateOptions(valid)){
-            oe.allowStart = true;
-        }
+        validateOptions(valid);
     }
 
     function setAppBackground(url){
         app.elements.background.element.style.backgroundSize = "cover";
-        document.body.style.backgroundPositionY = "50%";
-        app.elements.background.element.style
+        app.elements.background.element.style.backgroundPosition = "50%";
         app.elements.background.element.style.backgroundRepeat = "no-repeat";
         app.elements.background.element.style.backgroundImage = `url(${url})`;
+    }
+
+    function toggleMenu(){
+        let menu = app.elements.menu;
+        let active = menu.element.classList.contains("active");
+        menu.apply(`${active?'-':''}.active`);
     }
 
     return {
         init: init,
         createScore: createScore,
         selectGolfCourse: selectGolfCourse,
+        setAppBackground: setAppBackground,
         addOption: addOption,
+        toggleMenu: toggleMenu,
         to: function(name){app.pages.to(name)}
     };
 }

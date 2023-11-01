@@ -71,6 +71,7 @@ body > * {
 .app .main {
     grid-area: 3/1/5/4;
     overflow-y: scroll;
+    overflow-x: scroll;
 }
 
 .app .icon {
@@ -87,6 +88,9 @@ body > * {
     justify-content: stretch;
     padding: 10px;
     gap: 10px;
+    padding: 20px;
+    border-radius: 40px;
+    margin: 20px;
 }
 
 .app .content, .app .load-content {
@@ -94,7 +98,6 @@ body > * {
     flex-direction: column;
     align-items: center;
     justify-content: start;
-    padding: 10px;
     gap: 10px;
 }
 
@@ -151,11 +154,15 @@ body > * {
 }
 
 .app .score-table td, .app .score-table th {
-    width: 50px;
+    width: 80px;
     height: 50px;
-    border: 1px solid black;
+    border: 2px solid rgba(0, 0, 0, 0.8);
     text-align: center;
     cursor: default;
+}
+
+.app .score-table td.player-field, .app .score-table th.player-field {
+    width: 100px;
 }
 
 .app .score-table td.interactive:hover {
@@ -163,5 +170,18 @@ body > * {
     background-color: rgba(209, 255, 255, 0.566);
 }
 .app .score-table td.interactive.inedit {
-    background-color: aqua;
+    background-color: rgba(180, 239, 255, 0.493);
+}
+.app .score-table td.interactive.inedit:empty {
+    caret-color: transparent;
+    background-color: rgba(217, 249, 255, 0.539);
+    text-align: center;
+}
+.app .score-table td.blank {
+    background-color: rgba(213, 206, 196, 0.573);
+}
+
+.app #golf-course-info-page {
+    background-color: rgba(186, 222, 226, 0.803);
+    border: 2px solid rgba(41, 60, 63, 0.309);
 }

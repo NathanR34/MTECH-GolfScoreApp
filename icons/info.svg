@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="50"
+   height="50"
+   viewBox="0 0 50 50"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <circle
+       style="fill:#b1f7fe;stroke:#7fbdc7;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;fill-opacity:0.75272161;stroke-opacity:1"
+       id="path1"
+       cx="25"
+       cy="25"
+       r="20.65678" />
+    <path
+       d="m 25.727859,41.236503 q -0.630594,-0.07882 -1.694721,-0.118236 -1.064127,-0.03941 -2.640611,-0.03941 -1.576484,0 -2.64061,0.03941 -1.064127,0.03941 -1.694721,0.118236 v -0.630594 l 2.207078,-0.433533 q 1.221775,-0.236472 1.221775,-1.418835 v -7.921833 q 0,-0.94589 -0.472945,-1.379423 -0.472945,-0.433534 -1.891781,-0.74883 v -0.55177 q 2.798259,-0.709418 4.098859,-2.837671 h 0.630593 v 13.557763 q 0,0.591181 0.157649,0.867066 0.19706,0.275885 0.709417,0.394121 l 2.010018,0.472945 z M 21.392527,17.195121 q 0.670006,0 1.221776,0.512357 0.551769,0.512358 0.551769,1.182363 0,0.630594 -0.591182,1.142951 -0.551769,0.472945 -1.261187,0.472945 -0.670006,0 -1.142951,-0.472945 -0.472945,-0.472945 -0.472945,-1.142951 0,-0.670005 0.512357,-1.182363 0.512358,-0.512357 1.182363,-0.512357 z"
+       id="text1"
+       style="font-size:39.4121px;font-family:STSong;-inkscape-font-specification:STSong;fill-opacity:0.749611;stroke:#000000;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"
+       transform="scale(1.1686325,0.85570101)"
+       aria-label="i" />
+  </g>
+</svg>
